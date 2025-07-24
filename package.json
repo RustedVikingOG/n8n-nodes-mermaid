@@ -1,19 +1,19 @@
 {
-  "name": "n8n-nodes-<...>",
+  "name": "n8n-nodes-mermaid",
   "version": "0.1.0",
-  "description": "",
+  "description": "n8n community nodes for Mermaid diagram generation",
   "keywords": [
     "n8n-community-node-package"
   ],
   "license": "MIT",
   "homepage": "",
   "author": {
-    "name": "",
-    "email": ""
+    "name": "RustedVikingOG",
+    "email": "rustedviking@example.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/<...>/n8n-nodes-<...>.git"
+    "url": "https://github.com/RustedVikingOG/n8n-nodes-mermaid.git"
   },
   "engines": {
     "node": ">=20.15"
@@ -22,9 +22,9 @@
   "scripts": {
     "build": "npx rimraf dist && tsc && gulp build:icons",
     "dev": "tsc --watch",
-    "format": "prettier nodes credentials --write",
-    "lint": "eslint nodes credentials package.json",
-    "lintfix": "eslint nodes credentials package.json --fix",
+    "format": "prettier nodes --write",
+    "lint": "eslint nodes package.json",
+    "lintfix": "eslint nodes package.json --fix",
     "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
   },
   "files": [
@@ -32,24 +32,28 @@
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
-    "credentials": [
-      "dist/credentials/ExampleCredentialsApi.credentials.js",
-      "dist/credentials/HttpBinApi.credentials.js"
-    ],
+    "credentials": [],
     "nodes": [
-      "dist/nodes/ExampleNode/ExampleNode.node.js",
-      "dist/nodes/HttpBin/HttpBin.node.js"
+      "dist/nodes/MermaidCLI/MermaidCli.node.js"
     ]
+  },
+  "dependencies": {
+    "mermaid": "^11.9.0",
+    "@mermaid-js/mermaid-cli": "^11.6.0"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "~8.32.0",
     "eslint": "^8.57.0",
     "eslint-plugin-n8n-nodes-base": "^1.16.3",
     "gulp": "^5.0.0",
+    "n8n-workflow": "^1.82.0",
     "prettier": "^3.5.3",
     "typescript": "^5.8.2"
   },
+  "overrides": {
+    "form-data": "^4.0.4"
+  },
   "peerDependencies": {
-    "n8n-workflow": "*"
+    "n8n-workflow": ">=1.82.0"
   }
 }

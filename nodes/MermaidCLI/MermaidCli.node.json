@@ -1,0 +1,4 @@
+{
+	"node": "dist/nodes/MermaidCLI/MermaidCLI.node.js",
+	"nodeVersion": "1.0"
+}
