@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2025-07-25
+
+### Added
+- **Comprehensive README**: Complete rewrite of README.md with professional documentation
+- **Installation Guides**: Multiple installation methods (n8n interface, npm, Docker)
+- **Detailed Examples**: Real-world examples for all diagram types and operations
+- **Feature Highlights**: Professional feature list with emoji icons and clear descriptions
+- **Configuration Options**: Detailed documentation of output formats, rendering options, and CLI environment
+- **Troubleshooting Guide**: Common issues and solutions with debug instructions
+- **Resource Links**: Comprehensive links to documentation, examples, and support
+
+### Updated
+- **Package Version**: Bumped from 0.1.3 to 0.1.4
+- **Documentation Structure**: Professional README structure following n8n community standards
+- **Version History**: Added changelog entries in README for better visibility
+- **Project Branding**: Added npm and license badges for professional presentation
+
+### Removed
+- **Template Files**: Removed README_TEMPLATE.md and intermediate README_FINAL.md files
+- **Starter Content**: Replaced n8n-nodes-starter template content with project-specific documentation
+
+### Technical Details
+- **README Overhaul**: Replaced entire README content with comprehensive project documentation
+- **Documentation Standards**: Follows n8n community node documentation best practices
+- **User Experience**: Improved installation and setup instructions for better onboarding
+- **Developer Experience**: Enhanced development section with testing environment details
+
 ## [0.1.3] - 2025-07-25
 
 ### Updated
