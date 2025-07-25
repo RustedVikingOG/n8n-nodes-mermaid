@@ -14,23 +14,11 @@ import {
 	batchOperationFields,
 } from './MermaidOperations';
 
-// Temporarily comment out mermaid-cli imports to fix the Docker issue
-// import { run as mermaidCliRun } from '@mermaid-js/mermaid-cli';
-// import mermaid from 'mermaid';
+import { run as mermaidCliRun } from '@mermaid-js/mermaid-cli';
+import mermaid from 'mermaid';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-
-// Temporary stub functions until mermaid dependencies are properly configured
-const mermaidCliRun = async (...args: any[]) => {
-	console.log('Mermaid CLI functionality temporarily disabled.');
-	return false;
-};
-
-const mermaid = {
-	initialize: (config?: any) => {},
-	parse: async (code?: string) => ({ parser: 'temp' })
-};
 
 export class MermaidCli implements INodeType {
 	description: INodeTypeDescription = {
@@ -217,7 +205,7 @@ async function generateDiagram(executeFunctions: IExecuteFunctions, itemIndex: n
 			try {
 				const binaryPropertyName = executeFunctions.getNodeParameter('binaryPropertyName', itemIndex) as string;
 				let fileName = executeFunctions.getNodeParameter('fileName', itemIndex) as string;
-				
+
 				// Auto-generate filename if not provided
 				if (!fileName) {
 					fileName = `mermaid-diagram-${Date.now()}.${outputFormat}`;
@@ -225,7 +213,7 @@ async function generateDiagram(executeFunctions: IExecuteFunctions, itemIndex: n
 
 				// Read the file as buffer for binary data
 				const fileBuffer = await fs.readFile(outputFilePath);
-				
+
 				// Set up MIME type based on format
 				let mimeType: string;
 				switch (outputFormat) {

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2025-07-25
+
+### Fixed
+- **Mermaid CLI Activation**: Enabled actual Mermaid CLI functionality by replacing stub functions with real implementations
+- **Binary Data Functionality**: Fixed binary data output that was previously disabled due to stub functions
+- **Diagram Generation**: Restored full diagram generation capabilities for all output formats (PNG, SVG, PDF)
+
+### Technical Details
+- **CLI Integration**: Activated @mermaid-js/mermaid-cli imports and removed temporary stub functions
+- **Runtime Functionality**: Binary data output now works properly with actual diagram generation
+- **Error Resolution**: Eliminated "Binary data output is not yet implemented" error messages
+
+### Commit ID: (pending commit)
+
 ## [0.1.1] - 2025-07-25
 
 ### Added
