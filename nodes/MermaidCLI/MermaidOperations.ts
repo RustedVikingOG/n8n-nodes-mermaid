@@ -6,11 +6,6 @@ export const mermaidOperations: INodeProperties[] = [
 		name: 'operation',
 		type: 'options',
 		noDataExpression: true,
-		displayOptions: {
-			show: {
-				resource: ['mermaidCli'],
-			},
-		},
 		default: 'generate',
 		options: [
 			{
@@ -48,7 +43,6 @@ export const generateOperationFields: INodeProperties[] = [
 		type: 'options',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['generate'],
 			},
 		},
@@ -75,7 +69,6 @@ export const generateOperationFields: INodeProperties[] = [
 		},
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['generate'],
 				inputSource: ['text'],
 			},
@@ -90,7 +83,6 @@ export const generateOperationFields: INodeProperties[] = [
 		type: 'string',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['generate'],
 				inputSource: ['file'],
 			},
@@ -105,11 +97,10 @@ export const generateOperationFields: INodeProperties[] = [
 		type: 'options',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['generate'],
 			},
 		},
-		default: 'svg',
+		default: 'png',
 		options: [
 			{
 				name: 'SVG',
@@ -129,18 +120,74 @@ export const generateOperationFields: INodeProperties[] = [
 		],
 	},
 	{
+		displayName: 'Output Type',
+		name: 'outputType',
+		type: 'options',
+		displayOptions: {
+			show: {
+				operation: ['generate'],
+			},
+		},
+		default: 'fileContent',
+		options: [
+			{
+				name: 'File Content',
+				value: 'fileContent',
+				description: 'Return diagram content as text/base64 data',
+			},
+			{
+				name: 'Binary Data',
+				value: 'binary',
+				description: 'Return as binary data attachment for use in workflows',
+			},
+			{
+				name: 'File Path Only',
+				value: 'filePath',
+				description: 'Save to file and return only the file path',
+			},
+		],
+	},
+	{
 		displayName: 'Output Path',
 		name: 'outputPath',
 		type: 'string',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['generate'],
+				outputType: ['filePath'],
 			},
 		},
 		default: '',
-		description: 'Output file path (if empty, returns content directly)',
-		placeholder: '/path/to/output.svg',
+		description: 'Output file path (required when using File Path Only mode)',
+		placeholder: '/path/to/output.png',
+	},
+	{
+		displayName: 'Binary Property Name',
+		name: 'binaryPropertyName',
+		type: 'string',
+		displayOptions: {
+			show: {
+				operation: ['generate'],
+				outputType: ['binary'],
+			},
+		},
+		default: 'data',
+		description: 'Name of the binary property to store the diagram data',
+		placeholder: 'data',
+	},
+	{
+		displayName: 'File Name',
+		name: 'fileName',
+		type: 'string',
+		displayOptions: {
+			show: {
+				operation: ['generate'],
+				outputType: ['binary'],
+			},
+		},
+		default: '',
+		description: 'File name for the binary data (auto-generated if empty)',
+		placeholder: 'diagram.png',
 	},
 	{
 		displayName: 'Theme',
@@ -148,7 +195,6 @@ export const generateOperationFields: INodeProperties[] = [
 		type: 'options',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['generate'],
 			},
 		},
@@ -178,7 +224,6 @@ export const generateOperationFields: INodeProperties[] = [
 		type: 'color',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['generate'],
 			},
 		},
@@ -191,7 +236,6 @@ export const generateOperationFields: INodeProperties[] = [
 		type: 'number',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['generate'],
 				outputFormat: ['png'],
 			},
@@ -205,7 +249,6 @@ export const generateOperationFields: INodeProperties[] = [
 		type: 'number',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['generate'],
 				outputFormat: ['png'],
 			},
@@ -225,7 +268,6 @@ export const validateOperationFields: INodeProperties[] = [
 		},
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['validate'],
 			},
 		},
@@ -239,7 +281,6 @@ export const validateOperationFields: INodeProperties[] = [
 		type: 'boolean',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['validate'],
 			},
 		},
@@ -255,7 +296,6 @@ export const convertOperationFields: INodeProperties[] = [
 		type: 'string',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['convert'],
 			},
 		},
@@ -269,7 +309,6 @@ export const convertOperationFields: INodeProperties[] = [
 		type: 'options',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['convert'],
 			},
 		},
@@ -295,7 +334,6 @@ export const convertOperationFields: INodeProperties[] = [
 		type: 'string',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['convert'],
 			},
 		},
@@ -312,7 +350,6 @@ export const batchOperationFields: INodeProperties[] = [
 		type: 'string',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['batch'],
 			},
 		},
@@ -326,7 +363,6 @@ export const batchOperationFields: INodeProperties[] = [
 		type: 'string',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['batch'],
 			},
 		},
@@ -339,7 +375,6 @@ export const batchOperationFields: INodeProperties[] = [
 		type: 'string',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['batch'],
 			},
 		},
@@ -353,7 +388,6 @@ export const batchOperationFields: INodeProperties[] = [
 		type: 'options',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['batch'],
 			},
 		},
@@ -379,7 +413,6 @@ export const batchOperationFields: INodeProperties[] = [
 		type: 'boolean',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['batch'],
 			},
 		},
@@ -392,7 +425,6 @@ export const batchOperationFields: INodeProperties[] = [
 		type: 'number',
 		displayOptions: {
 			show: {
-				resource: ['mermaidCli'],
 				operation: ['batch'],
 				parallel: [true],
 			},

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-07-25
+
+### Added
+- **Binary Data Output Support**: Implemented direct binary data return functionality for Mermaid diagrams, enabling seamless workflow integration without file system dependencies
+- **Enhanced Output Type Selection**: Added comprehensive Output Type dropdown with options for File Content, Binary Data, and File Path Only modes
+- **Binary Data Configuration**: Added binary property name and filename configuration options for custom binary data handling
+- **MIME Type Detection**: Automatic MIME type detection and assignment for different output formats (PNG, SVG, PDF)
+
+### Changed
+- **Simplified Node UI**: Removed redundant Resource dropdown from node interface for cleaner user experience
+- **Enhanced Conditional Logic**: Improved field display logic based on output type selection
+- **Memory Management**: Optimized temporary file handling and cleanup for all output modes
+- **Error Handling**: Enhanced error handling for binary data processing and file operations
+
+### Technical Details
+- **Binary Attachment**: Diagrams can now be attached as binary data to workflow items for direct use by subsequent nodes
+- **File Cleanup**: Improved temporary file management with proper cleanup in all execution paths
+- **Validation**: Added validation for required fields based on selected output type
+
+### Commit ID: (pending commit)
+
 ## [0.1.0] - 2025-07-24
 
 ### Added

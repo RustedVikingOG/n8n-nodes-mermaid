@@ -47,19 +47,6 @@ export class MermaidCli implements INodeType {
 		inputs: ['main'],
 		outputs: ['main'],
 		properties: [
-			{
-				displayName: 'Resource',
-				name: 'resource',
-				type: 'options',
-				noDataExpression: true,
-				default: 'mermaidCli',
-				options: [
-					{
-						name: 'Mermaid CLI',
-						value: 'mermaidCli',
-					},
-				],
-			},
 			...mermaidOperations,
 			...generateOperationFields,
 			...validateOperationFields,
@@ -74,38 +61,44 @@ export class MermaidCli implements INodeType {
 
 		for (let i = 0; i < items.length; i++) {
 			try {
-				const resource = this.getNodeParameter('resource', i) as string;
 				const operation = this.getNodeParameter('operation', i) as string;
 
 				let result: any;
 
-				if (resource === 'mermaidCli') {
-					switch (operation) {
-						case 'generate':
-							result = await generateDiagram(this, i);
-							break;
-						case 'validate':
-							result = await validateSyntax(this, i);
-							break;
-						case 'convert':
-							result = await convertFormat(this, i);
-							break;
-						case 'batch':
-							result = await batchProcess(this, i);
-							break;
-						default:
-							throw new NodeOperationError(
-								this.getNode(),
-								`Unknown operation: ${operation}`,
-								{ itemIndex: i },
-							);
-					}
+				switch (operation) {
+					case 'generate':
+						result = await generateDiagram(this, i);
+						break;
+					case 'validate':
+						result = await validateSyntax(this, i);
+						break;
+					case 'convert':
+						result = await convertFormat(this, i);
+						break;
+					case 'batch':
+						result = await batchProcess(this, i);
+						break;
+					default:
+						throw new NodeOperationError(
+							this.getNode(),
+							`Unknown operation: ${operation}`,
+							{ itemIndex: i },
+						);
 				}
 
-				returnData.push({
+				const nodeExecutionData: INodeExecutionData = {
 					json: result,
 					pairedItem: { item: i },
-				});
+				};
+
+				// Add binary data if present
+				if (result.binary) {
+					nodeExecutionData.binary = result.binary;
+					// Remove binary from JSON to avoid duplication
+					delete result.binary;
+				}
+
+				returnData.push(nodeExecutionData);
 			} catch (error) {
 				if (this.continueOnFail()) {
 					returnData.push({
@@ -127,12 +120,12 @@ export class MermaidCli implements INodeType {
 async function generateDiagram(executeFunctions: IExecuteFunctions, itemIndex: number): Promise<any> {
 	const inputSource = executeFunctions.getNodeParameter('inputSource', itemIndex) as string;
 	const outputFormat = executeFunctions.getNodeParameter('outputFormat', itemIndex) as string;
-	const outputPath = executeFunctions.getNodeParameter('outputPath', itemIndex) as string;
+	const outputType = executeFunctions.getNodeParameter('outputType', itemIndex) as string;
 	const theme = executeFunctions.getNodeParameter('theme', itemIndex) as string;
 	const backgroundColor = executeFunctions.getNodeParameter('backgroundColor', itemIndex) as string;
 
-		let mermaidCode: string;
-		let inputFilePath: string;
+	let mermaidCode: string;
+	let inputFilePath: string;
 
 	if (inputSource === 'text') {
 		mermaidCode = executeFunctions.getNodeParameter('mermaidCode', itemIndex) as string;
@@ -156,55 +149,115 @@ async function generateDiagram(executeFunctions: IExecuteFunctions, itemIndex: n
 		const height = executeFunctions.getNodeParameter('height', itemIndex) as number;
 		options.width = width;
 		options.height = height;
-	}		// Handle output
-		let outputFilePath: string;
-		let returnContent = false;
+	}
 
-		if (outputPath) {
-			outputFilePath = outputPath;
-		} else {
-			// Create temporary output file
-			const tempDir = os.tmpdir();
-			outputFilePath = path.join(tempDir, `mermaid-output-${Date.now()}-${itemIndex}.${outputFormat}`);
-			returnContent = true;
+	// Handle output based on outputType
+	let outputFilePath: string;
+	let returnContent = false;
+
+	if (outputType === 'filePath') {
+		// User must provide an output path
+		outputFilePath = executeFunctions.getNodeParameter('outputPath', itemIndex) as string;
+		if (!outputFilePath) {
+			throw new NodeOperationError(
+				executeFunctions.getNode(),
+				'Output Path is required when using "File Path Only" output type',
+				{ itemIndex },
+			);
+		}
+	} else if (outputType === 'binary') {
+		// Binary mode - create temporary output file and return as binary data
+		const tempDir = os.tmpdir();
+		outputFilePath = path.join(tempDir, `mermaid-output-${Date.now()}-${itemIndex}.${outputFormat}`);
+	} else {
+		// fileContent mode - create temporary output file and return content
+		const tempDir = os.tmpdir();
+		outputFilePath = path.join(tempDir, `mermaid-output-${Date.now()}-${itemIndex}.${outputFormat}`);
+		returnContent = true;
+	}
+
+	try {
+		// Use the mermaid-cli Node.js API with proper typing
+		await mermaidCliRun(
+			inputFilePath,
+			outputFilePath as `${string}.png` | `${string}.svg` | `${string}.pdf`,
+			options
+		);
+
+		let result: any = {
+			success: true,
+			inputPath: inputFilePath,
+			outputPath: outputFilePath,
+			format: outputFormat,
+			outputType,
+			options,
+		};
+
+		// If we need to return content, read the file
+		if (returnContent) {
+			try {
+				if (outputFormat === 'svg') {
+					result.content = await fs.readFile(outputFilePath, 'utf-8');
+					result.contentType = 'image/svg+xml';
+				} else {
+					const buffer = await fs.readFile(outputFilePath);
+					result.content = buffer.toString('base64');
+					result.contentType = outputFormat === 'png' ? 'image/png' : 'application/pdf';
+				}
+
+				// Clean up temporary output file
+				await fs.unlink(outputFilePath);
+			} catch (readError) {
+				result.readError = (readError as Error).message;
+			}
 		}
 
-		try {
-			// Use the mermaid-cli Node.js API with proper typing
-			await mermaidCliRun(
-				inputFilePath,
-				outputFilePath as `${string}.png` | `${string}.svg` | `${string}.pdf`,
-				options
-			);
-
-			let result: any = {
-				success: true,
-				inputPath: inputFilePath,
-				outputPath: outputFilePath,
-				format: outputFormat,
-				options,
-			};
-
-			// If we need to return content, read the file
-			if (returnContent) {
-				try {
-					if (outputFormat === 'svg') {
-						result.content = await fs.readFile(outputFilePath, 'utf-8');
-						result.contentType = 'image/svg+xml';
-					} else {
-						const buffer = await fs.readFile(outputFilePath);
-						result.content = buffer.toString('base64');
-						result.contentType = outputFormat === 'png' ? 'image/png' : 'application/pdf';
-					}
-
-					// Clean up temporary output file
-					await fs.unlink(outputFilePath);
-				} catch (readError) {
-					result.readError = (readError as Error).message;
+		// Handle binary data output
+		if (outputType === 'binary') {
+			try {
+				const binaryPropertyName = executeFunctions.getNodeParameter('binaryPropertyName', itemIndex) as string;
+				let fileName = executeFunctions.getNodeParameter('fileName', itemIndex) as string;
+				
+				// Auto-generate filename if not provided
+				if (!fileName) {
+					fileName = `mermaid-diagram-${Date.now()}.${outputFormat}`;
 				}
-			}
 
-			// Clean up temporary input file if created
+				// Read the file as buffer for binary data
+				const fileBuffer = await fs.readFile(outputFilePath);
+				
+				// Set up MIME type based on format
+				let mimeType: string;
+				switch (outputFormat) {
+					case 'png':
+						mimeType = 'image/png';
+						break;
+					case 'svg':
+						mimeType = 'image/svg+xml';
+						break;
+					case 'pdf':
+						mimeType = 'application/pdf';
+						break;
+					default:
+						mimeType = 'application/octet-stream';
+				}
+
+				// Add binary data to result
+				result.binary = {
+					[binaryPropertyName]: {
+						data: fileBuffer.toString('base64'),
+						mimeType,
+						fileName,
+						fileExtension: outputFormat,
+					},
+				};
+
+				// Clean up temporary output file
+				await fs.unlink(outputFilePath);
+			} catch (binaryError) {
+				result.binaryError = (binaryError as Error).message;
+			}
+		}			// Clean up temporary input file if created
 			if (inputSource === 'text') {
 				try {
 					await fs.unlink(inputFilePath);
@@ -223,7 +276,7 @@ async function generateDiagram(executeFunctions: IExecuteFunctions, itemIndex: n
 					// Ignore cleanup errors
 				}
 			}
-			if (returnContent) {
+			if (returnContent || outputType === 'binary') {
 				try {
 					await fs.unlink(outputFilePath);
 				} catch (cleanupError) {
