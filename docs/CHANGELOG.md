@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Runtime Functionality**: Binary data output now works properly with actual diagram generation
 - **Error Resolution**: Eliminated "Binary data output is not yet implemented" error messages
 
-### Commit ID: (pending commit)
+### Commit ID: 2e4feea
 
 ## [0.1.1] - 2025-07-25
 
