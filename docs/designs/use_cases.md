@@ -1,573 +1,587 @@
-## n8n Mermaid Nodes Project
+## n8n Mermaid CLI Node Project
 
 **project directories**
-- nodes/ - Custom n8n node implementations for Mermaid diagram generation
-- credentials/ - Authentication credential definitions for external services
+- nodes/MermaidCLI/ - Custom MermaidCli n8n node implementation with 5 operations
+- n8n_test_env/ - Docker testing environment with Chromium browser support
 - dist/ - Compiled JavaScript output and packaged assets
 
-This project provides custom n8n nodes that enable Mermaid diagram generation within n8n workflows. The nodes allow users to create flowcharts, sequence diagrams, Gantt charts, and other diagram types by processing workflow data and generating Mermaid syntax or rendered diagrams.
+This project provides a single comprehensive n8n node called MermaidCli that enables Mermaid diagram generation within n8n workflows through CLI subprocess execution. The node supports 5 operations: generate diagrams, render to binary data, validate syntax, convert formats, and batch process multiple files. It uses @mermaid-js/mermaid-cli with Chromium rendering for reliable diagram generation in multiple output formats (PNG, SVG, PDF).
 
-## USE-CASE: Automated Workflow Documentation Generation
+## USE-CASE: CLI-Based Diagram Generation
 
-**Feature 1: Flowchart Creation from Workflow Data**
+**Feature 1: Generate Operation - Multiple Output Modes**
 
 || definition |
 |--|--|
-| GIVEN | A workflow contains data about process steps, decisions, and connections |
-| WHEN | The Mermaid Flowchart node processes this data with user-defined templates |
-| THEN | A Mermaid flowchart diagram is generated showing the process flow visualization |
+| GIVEN | A workflow contains Mermaid syntax as text or file path with output configuration |
+| WHEN | The MermaidCli node execute with 'generate' operation and specified output type |
+| THEN | A diagram is generated via CLI subprocess and delivered as file content, binary data, or file path |
 
 **State Diagram: Logic flow within feature**
 
-The state diagram shows how the Mermaid node processes input data through validation, template application, and diagram generation stages.
+The state diagram shows how the MermaidCli node processes generate operations through CLI subprocess execution with multiple output delivery modes.
 
 ```mermaid
 ---
-title: Mermaid Node Processing States
+title: Generate Operation Processing States
 ---
 stateDiagram-v2
-    [*] --> "Input Received"
-    "Input Received" --> "Data Validation"
-    "Data Validation" --> "Template Selection" : Valid Data
-    "Data Validation" --> "Error State" : Invalid Data
-    "Template Selection" --> "Mermaid Syntax Generation"
-    "Mermaid Syntax Generation" --> "Diagram Rendering"
-    "Diagram Rendering" --> "Output Preparation"
-    "Output Preparation" --> [*]
-    "Error State" --> [*]
+    [*] --> "Input Source Selection"
+    "Input Source Selection" --> "Text Input Processing" : Text Source
+    "Input Source Selection" --> "File Path Processing" : File Source
+    "Text Input Processing" --> "Temporary File Creation"
+    "File Path Processing" --> "CLI Argument Construction"
+    "Temporary File Creation" --> "CLI Argument Construction"
+    "CLI Argument Construction" --> "Subprocess Execution"
+    "Subprocess Execution" --> "Output Type Processing"
+    "Output Type Processing" --> "File Content Return" : fileContent Mode
+    "Output Type Processing" --> "Binary Data Return" : binary Mode
+    "Output Type Processing" --> "File Path Return" : filePath Mode
+    "File Content Return" --> [*]
+    "Binary Data Return" --> [*]
+    "File Path Return" --> [*]
 ```
 
 **Sequence Diagram: Interactions between systems to enable Feature**
 
-The sequence diagram illustrates how the n8n workflow engine interacts with the Mermaid node to process data and generate diagrams.
+The sequence diagram illustrates how the MermaidCli node executes CLI subprocess operations for diagram generation.
 
 ```mermaid
 ---
-title: Workflow Documentation Generation Sequence
+title: CLI-Based Diagram Generation Sequence
 ---
 sequenceDiagram
     participant "Workflow Engine" as WE
-    participant "Mermaid Node" as MN
-    participant "Data Processor" as DP
-    participant "Diagram Generator" as DG
-    participant "Output Handler" as OH
+    participant "MermaidCli Node" as MC
+    participant "File System" as FS
+    participant "CLI Subprocess" as CLI
+    participant "Chromium Renderer" as CR
     
-    WE->>MN: Execute with input data
-    MN->>DP: Validate and process input
-    DP->>DG: Generate Mermaid syntax
-    DG->>OH: Format diagram output
-    OH->>MN: Return formatted result
-    MN->>WE: Complete execution with diagram
+    WE->>MC: Execute with Mermaid syntax
+    MC->>FS: Create temporary input file
+    MC->>CLI: Execute mmdc command
+    CLI->>CR: Launch headless Chromium
+    CR->>FS: Generate output file
+    FS->>MC: Read generated output
+    MC->>FS: Cleanup temporary files
+    MC->>WE: Return processed result
 ```
 
 **Data Entity Relationship: Data structure for entities in Feature**
 
-The entity relationship diagram shows the data structures used for storing diagram configuration, input data, and generated outputs.
+The entity relationship diagram shows the data structures used for CLI-based diagram generation configuration and output processing.
 
 ```mermaid
 ---
-title: Mermaid Node Data Entities
+title: Generate Operation Data Model
 ---
 erDiagram
-    "Node Configuration" {
-        string nodeId
-        string displayName
-        string diagramType
-        object templateSettings
-        boolean renderOutput
-    }
-    
-    "Input Data" {
-        string itemId
-        object jsonData
-        string dataType
-        object metadata
-    }
-    
-    "Template Definition" {
-        string templateId
-        string templateName
-        string mermaidSyntax
-        object parameters
-        array fieldMappings
-    }
-    
-    "Generated Diagram" {
-        string diagramId
+    "Generate Configuration" {
+        string inputSource
         string mermaidCode
-        string renderedSvg
-        object metadata
-        datetime createdAt
+        string inputFilePath
+        string outputFormat
+        string outputType
+        string theme
+        string backgroundColor
+        int width
+        int height
     }
     
-    "Node Configuration" ||--o{ "Template Definition" : uses
-    "Input Data" ||--o{ "Generated Diagram" : produces
-    "Template Definition" ||--o{ "Generated Diagram" : generates
+    "CLI Options" {
+        string inputPath
+        string outputPath
+        string theme
+        string backgroundColor
+        int width
+        int height
+    }
+    
+    "Output Result" {
+        boolean success
+        string inputPath
+        string outputPath
+        string format
+        string outputType
+        object options
+        string content
+        object binary
+    }
+    
+    "Binary Data" {
+        string data
+        string mimeType
+        string fileName
+        string fileExtension
+    }
+    
+    "Generate Configuration" ||--o{ "CLI Options" : configures
+    "CLI Options" ||--o{ "Output Result" : produces
+    "Output Result" ||--o{ "Binary Data" : contains
 ```
 
-## USE-CASE: Dynamic Sequence Diagram Creation
+## USE-CASE: Binary Data Rendering
 
-**Feature 1: API Interaction Visualization**
+**Feature 1: RenderToBinary Operation - Direct Binary Output**
 
 || definition |
 |--|--|
-| GIVEN | Workflow data contains API call sequences, responses, and timing information |
-| WHEN | The Mermaid Sequence Diagram node processes this data with participant mapping |
-| THEN | A sequence diagram is generated showing the API interaction flow between services |
+| GIVEN | Workflow needs diagram data as binary attachments for email, file storage, or API transmission |
+| WHEN | The MermaidCli node executes with 'renderToBinary' operation and format configuration |
+| THEN | A diagram is generated and returned as binary data with proper MIME type and filename |
 
 **State Diagram: Logic flow within feature**
 
-The state diagram shows the specific processing steps for sequence diagram generation including participant identification and interaction mapping.
+The state diagram shows the specific processing steps for binary rendering including format handling and MIME type assignment.
 
 ```mermaid
 ---
-title: Sequence Diagram Generation Flow
+title: Binary Rendering Processing Flow
 ---
 stateDiagram-v2
-    [*] --> "Input Processing"
-    "Input Processing" --> "Participant Identification"
-    "Participant Identification" --> "Interaction Mapping"
-    "Interaction Mapping" --> "Sequence Ordering"
-    "Sequence Ordering" --> "Mermaid Sequence Generation"
-    "Mermaid Sequence Generation" --> "Diagram Output"
-    "Diagram Output" --> [*]
+    [*] --> "Binary Operation Input"
+    "Binary Operation Input" --> "Format Selection"
+    "Format Selection" --> "Temporary File Setup"
+    "Temporary File Setup" --> "CLI Subprocess Execution"
+    "CLI Subprocess Execution" --> "Binary File Reading"
+    "Binary File Reading" --> "MIME Type Assignment"
+    "MIME Type Assignment" --> "Base64 Encoding"
+    "Base64 Encoding" --> "Binary Data Package"
+    "Binary Data Package" --> [*]
 ```
 
 **Sequence Diagram: Interactions between systems to enable Feature**
 
-Shows how the sequence diagram node interacts with data sources and generates the final diagram output.
+Shows how the renderToBinary operation interacts with the file system and CLI to produce binary attachments.
 
 ```mermaid
 ---
-title: API Sequence Diagram Generation
+title: Binary Data Rendering Process
 ---
 flowchart TD
-    "API Call Data" --> "Sequence Node"
-    "Sequence Node" --> "Participant Extractor"
-    "Participant Extractor" --> "Interaction Parser"
-    "Interaction Parser" --> "Sequence Builder"
-    "Sequence Builder" --> "Mermaid Syntax Generator"
-    "Mermaid Syntax Generator" --> "Sequence Diagram Output"
+    "Mermaid Code Input" --> "RenderToBinary Operation"
+    "RenderToBinary Operation" --> "Temporary File Creator"
+    "Temporary File Creator" --> "CLI Subprocess Manager"
+    "CLI Subprocess Manager" --> "Chromium Renderer"
+    "Chromium Renderer" --> "Binary File Reader"
+    "Binary File Reader" --> "MIME Type Processor"
+    "MIME Type Processor" --> "Base64 Encoder"
+    "Base64 Encoder" --> "Binary Data Output"
 ```
 
 **Data Entity Relationship: Data structure for entities in Feature**
 
-Data structures specific to sequence diagram generation including participants, interactions, and timing information.
+Data structures specific to binary rendering including MIME type mapping and binary data packaging.
 
 ```mermaid
 ---
-title: Sequence Diagram Data Model
+title: Binary Rendering Data Model
 ---
 erDiagram
-    "Sequence Configuration" {
-        string configId
-        array participants
-        object styling
-        boolean showTimestamps
+    "RenderToBinary Configuration" {
+        string mermaidCode
+        string outputFormat
+        string binaryPropertyName
+        string fileName
+        string theme
+        string backgroundColor
+        int width
+        int height
     }
     
-    "Participant" {
-        string participantId
-        string displayName
-        string participantType
-        string color
-    }
-    
-    "Interaction" {
-        string interactionId
-        string fromParticipant
-        string toParticipant
-        string message
-        string interactionType
-        datetime timestamp
-    }
-    
-    "Sequence Diagram" {
-        string sequenceId
-        string mermaidSyntax
+    "Format Specifications" {
+        string formatType
+        string mimeType
+        string fileExtension
         object renderOptions
-        array interactions
     }
     
-    "Sequence Configuration" ||--o{ "Participant" : defines
-    "Participant" ||--o{ "Interaction" : participates
-    "Interaction" ||--o{ "Sequence Diagram" : included_in
+    "Binary Output" {
+        string propertyName
+        string data
+        string mimeType
+        string fileName
+        string fileExtension
+    }
+    
+    "File Operations" {
+        string tempInputPath
+        string tempOutputPath
+        string fileContent
+        buffer binaryData
+    }
+    
+    "RenderToBinary Configuration" ||--o{ "Format Specifications" : defines
+    "Format Specifications" ||--o{ "File Operations" : configures
+    "File Operations" ||--o{ "Binary Output" : generates
 ```
 
-## USE-CASE: Data Flow Visualization
+## USE-CASE: Syntax Validation and Quality Assurance
 
-**Feature 1: Workflow Data Pipeline Mapping**
+**Feature 1: Validate Operation - Mermaid Syntax Checking**
 
 || definition |
 |--|--|
-| GIVEN | Workflow contains data transformation steps, data sources, and output destinations |
-| WHEN | The Mermaid Graph node processes this pipeline data with directional flow mapping |
-| THEN | A graph diagram is generated showing the complete data flow from sources to destinations |
+| GIVEN | Workflow contains Mermaid syntax that needs validation before processing or rendering |
+| WHEN | The MermaidCli node executes with 'validate' operation and detailed output configuration |
+| THEN | The syntax is checked against supported diagram types and validation results are returned |
 
 **State Diagram: Logic flow within feature**
 
-The state diagram shows how data flow visualization processes pipeline information through node identification and connection mapping.
+The state diagram shows how syntax validation processes Mermaid code through pattern matching and error detection.
 
 ```mermaid
 ---
-title: Data Flow Visualization States
+title: Syntax Validation Processing Flow
 ---
 stateDiagram-v2
-    [*] --> "Pipeline Data Input"
-    "Pipeline Data Input" --> "Source Node Identification"
-    "Source Node Identification" --> "Transformation Mapping"
-    "Transformation Mapping" --> "Destination Mapping"
-    "Destination Mapping" --> "Flow Direction Calculation"
-    "Flow Direction Calculation" --> "Graph Generation"
-    "Graph Generation" --> "Flow Diagram Output"
-    "Flow Diagram Output" --> [*]
+    [*] --> "Validation Input"
+    "Validation Input" --> "Code Trimming"
+    "Code Trimming" --> "Pattern Matching"
+    "Pattern Matching" --> "Valid Syntax" : Recognized Pattern
+    "Pattern Matching" --> "Invalid Syntax" : Unknown Pattern
+    "Valid Syntax" --> "Detailed Analysis"
+    "Invalid Syntax" --> "Error Reporting"
+    "Detailed Analysis" --> "Validation Success"
+    "Error Reporting" --> "Validation Failure"
+    "Validation Success" --> [*]
+    "Validation Failure" --> [*]
 ```
 
 **Sequence Diagram: Interactions between systems to enable Feature**
 
-Shows the interaction flow for processing data pipeline information and generating flow diagrams.
+Shows how syntax validation processes input without requiring CLI subprocess execution.
 
 ```mermaid
 ---
-title: Data Flow Diagram Generation Process
+title: Syntax Validation Process
 ---
 flowchart TD
-    "Pipeline Metadata" --> "Flow Analysis Node"
-    "Flow Analysis Node" --> "Node Classifier"
-    "Node Classifier" --> "Connection Tracker"
-    "Connection Tracker" --> "Flow Direction Mapper"
-    "Flow Direction Mapper" --> "Graph Syntax Builder"
-    "Graph Syntax Builder" --> "Data Flow Diagram"
+    "Mermaid Code Input" --> "Validate Operation"
+    "Validate Operation" --> "Syntax Pattern Checker"
+    "Syntax Pattern Checker" --> "Diagram Type Identifier"
+    "Diagram Type Identifier" --> "Validation Result Generator"
+    "Validation Result Generator" --> "Detailed Output Formatter"
+    "Detailed Output Formatter" --> "Validation Response"
 ```
 
 **Data Entity Relationship: Data structure for entities in Feature**
 
-Data structures for representing data pipeline components and their relationships in flow diagrams.
+Data structures for syntax validation including supported patterns and validation results.
 
 ```mermaid
 ---
-title: Data Flow Entity Model
+title: Syntax Validation Data Model
 ---
 erDiagram
-    "Pipeline Definition" {
-        string pipelineId
-        string pipelineName
-        array dataNodes
-        array connections
-        object metadata
+    "Validation Configuration" {
+        string mermaidCode
+        boolean detailedOutput
     }
     
-    "Data Node" {
-        string nodeId
-        string nodeName
-        string nodeType
-        object configuration
-        array inputs
-        array outputs
+    "Supported Patterns" {
+        array validStartPatterns
+        string patternType
+        string diagramCategory
     }
     
-    "Data Connection" {
-        string connectionId
-        string sourceNodeId
-        string targetNodeId
-        string dataType
-        object transformations
+    "Validation Result" {
+        boolean valid
+        string message
+        string diagramType
+        object details
+        string error
     }
     
-    "Flow Diagram" {
-        string diagramId
-        string graphSyntax
-        object layoutOptions
-        array visualNodes
+    "Detailed Information" {
+        string code
+        array supportedTypes
+        string identifiedType
+        object errorContext
     }
     
-    "Pipeline Definition" ||--o{ "Data Node" : contains
-    "Data Node" ||--o{ "Data Connection" : connected_by
-    "Data Connection" ||--o{ "Flow Diagram" : represented_in
+    "Validation Configuration" ||--o{ "Supported Patterns" : checked_against
+    "Supported Patterns" ||--o{ "Validation Result" : produces
+    "Validation Result" ||--o{ "Detailed Information" : includes
 ```
 
-## USE-CASE: Project Timeline Visualization
+## USE-CASE: Format Conversion and File Processing
 
-**Feature 1: Gantt Chart Generation from Project Data**
+**Feature 1: Convert Operation - Diagram Format Transformation**
 
 || definition |
 |--|--|
-| GIVEN | Workflow data contains project tasks, dates, dependencies, and resource assignments |
-| WHEN | The Mermaid Gantt node processes this data with timeline configuration |
-| THEN | A Gantt chart is generated showing project schedule and task dependencies |
+| GIVEN | Existing diagram files need to be converted to different output formats |
+| WHEN | The MermaidCli node executes with 'convert' operation specifying input and output paths |
+| THEN | The diagram file is processed through CLI and converted to the target format |
 
 **State Diagram: Logic flow within feature**
 
-The state diagram shows the processing flow for converting project data into Gantt chart format.
+The state diagram shows the processing flow for converting existing diagram files to new formats.
 
 ```mermaid
 ---
-title: Gantt Chart Generation Flow
+title: Format Conversion Processing Flow
 ---
 stateDiagram-v2
-    [*] --> "Project Data Input"
-    "Project Data Input" --> "Task Extraction"
-    "Task Extraction" --> "Date Validation"
-    "Date Validation" --> "Dependency Analysis"
-    "Dependency Analysis" --> "Timeline Calculation"
-    "Timeline Calculation" --> "Gantt Syntax Generation"
-    "Gantt Syntax Generation" --> "Chart Output"
-    "Chart Output" --> [*]
+    [*] --> "Convert Operation Input"
+    "Convert Operation Input" --> "Input File Validation"
+    "Input File Validation" --> "Output Format Selection"
+    "Output Format Selection" --> "CLI Conversion Execution"
+    "CLI Conversion Execution" --> "Output File Generation"
+    "Output File Generation" --> "Conversion Success"
+    "Conversion Success" --> [*]
 ```
 
 **Sequence Diagram: Interactions between systems to enable Feature**
 
-Shows how project timeline data is processed to create Gantt chart visualizations.
+Shows how format conversion processes existing files through CLI transformation.
 
 ```mermaid
 ---
-title: Project Timeline Visualization Flow
+title: Format Conversion Process
 ---
 flowchart TD
-    "Project Management Data" --> "Gantt Chart Node"
-    "Gantt Chart Node" --> "Task Processor"
-    "Task Processor" --> "Date Calculator"
-    "Date Calculator" --> "Dependency Resolver"
-    "Dependency Resolver" --> "Gantt Builder"
-    "Gantt Builder" --> "Timeline Chart Output"
+    "Input File Path" --> "Convert Operation"
+    "Convert Operation" --> "File Existence Checker"
+    "File Existence Checker" --> "CLI Subprocess Manager"
+    "CLI Subprocess Manager" --> "Format Converter"
+    "Format Converter" --> "Output File Generator"
+    "Output File Generator" --> "Conversion Result"
 ```
 
 **Data Entity Relationship: Data structure for entities in Feature**
 
-Data structures for project timeline information and Gantt chart generation.
+Data structures for format conversion operations and file processing.
 
 ```mermaid
 ---
-title: Project Timeline Data Model
+title: Format Conversion Data Model
 ---
 erDiagram
-    "Project Schedule" {
-        string projectId
-        string projectName
-        date startDate
-        date endDate
-        array tasks
-        object settings
+    "Convert Configuration" {
+        string inputFilePath
+        string outputFormat
+        string outputPath
     }
     
-    "Task Definition" {
-        string taskId
-        string taskName
-        date startDate
-        date endDate
-        string status
-        array dependencies
-        string assignee
-    }
-    
-    "Task Dependency" {
-        string dependencyId
-        string predecessorTaskId
-        string successorTaskId
-        string dependencyType
-        int lagTime
-    }
-    
-    "Gantt Chart" {
-        string chartId
-        string ganttSyntax
-        object timelineConfig
-        array milestones
-    }
-    
-    "Project Schedule" ||--o{ "Task Definition" : contains
-    "Task Definition" ||--o{ "Task Dependency" : has
-    "Task Dependency" ||--o{ "Gantt Chart" : visualized_in
-```
-
-## USE-CASE: Node Development and Testing
-
-**Feature 1: Template Node to Mermaid Node Conversion**
-
-|| definition |
-|--|--|
-| GIVEN | A developer has the example nodes (ExampleNode, HttpBin) as templates in the project |
-| WHEN | The developer modifies these templates to implement Mermaid-specific functionality |
-| THEN | New Mermaid nodes are created that can generate diagrams within n8n workflows |
-
-**State Diagram: Logic flow within feature**
-
-The state diagram shows the development lifecycle from template modification to production-ready Mermaid nodes.
-
-```mermaid
----
-title: Node Development Lifecycle
----
-stateDiagram-v2
-    [*] --> "Template Analysis"
-    "Template Analysis" --> "Requirement Definition"
-    "Requirement Definition" --> "Node Implementation"
-    "Node Implementation" --> "TypeScript Compilation"
-    "TypeScript Compilation" --> "ESLint Validation"
-    "ESLint Validation" --> "Local Testing"
-    "Local Testing" --> "Build Package"
-    "Build Package" --> "npm Publishing"
-    "npm Publishing" --> [*]
-    "ESLint Validation" --> "Code Correction" : Validation Failed
-    "Code Correction" --> "Node Implementation"
-    "Local Testing" --> "Debug and Fix" : Tests Failed
-    "Debug and Fix" --> "Node Implementation"
-```
-
-**Sequence Diagram: Interactions between systems to enable Feature**
-
-Shows the interaction between development tools and build systems during node development.
-
-```mermaid
----
-title: Development Workflow Process
----
-flowchart TD
-    "Developer Code Changes" --> "TypeScript Compiler"
-    "TypeScript Compiler" --> "ESLint Validator"
-    "ESLint Validator" --> "Prettier Formatter"
-    "Prettier Formatter" --> "Gulp Asset Processor"
-    "Gulp Asset Processor" --> "Distribution Package"
-    "Distribution Package" --> "Local n8n Testing"
-    "Local n8n Testing" --> "npm Package Registry"
-```
-
-**Data Entity Relationship: Data structure for entities in Feature**
-
-Data structures for development configuration and build artifacts.
-
-```mermaid
----
-title: Development Configuration Model
----
-erDiagram
-    "Package Configuration" {
-        string packageName
-        string version
-        array nodeList
-        array credentialList
-        object buildScripts
-    }
-    
-    "Node Definition" {
-        string nodeFileName
-        string nodeClassName
-        string displayName
-        array properties
-        object description
-    }
-    
-    "Build Artifact" {
-        string artifactId
+    "File Processing" {
         string sourceFile
-        string compiledFile
-        string assetPath
-        datetime buildTime
+        string targetFile
+        string formatType
+        boolean conversionSuccess
     }
     
-    "Development Environment" {
-        string projectPath
-        object tsConfig
-        object eslintConfig
-        object prettierConfig
-        object gulpConfig
+    "Conversion Result" {
+        boolean success
+        string inputPath
+        string outputPath
+        string format
+        string error
     }
     
-    "Package Configuration" ||--o{ "Node Definition" : contains
-    "Node Definition" ||--o{ "Build Artifact" : generates
-    "Development Environment" ||--o{ "Build Artifact" : produces
+    "Convert Configuration" ||--o{ "File Processing" : initiates
+    "File Processing" ||--o{ "Conversion Result" : produces
 ```
 
-## USE-CASE: HTTP Testing and API Integration
+## USE-CASE: Batch Processing and Workflow Automation
 
-**Feature 1: HttpBin Node for Development Testing**
+**Feature 1: Batch Operation - Multiple File Processing**
 
 || definition |
 |--|--|
-| GIVEN | Developers need to test HTTP operations and API integrations during Mermaid node development |
-| WHEN | The HttpBin node is used in workflows to test HTTP GET, DELETE, and other operations |
-| THEN | Developers can validate their node implementations against known HTTP endpoints |
+| GIVEN | A directory contains multiple Mermaid files that need processing in bulk |
+| WHEN | The MermaidCli node executes with 'batch' operation specifying directory patterns and processing options |
+| THEN | All matching files are processed either sequentially or in parallel with configurable concurrency |
 
 **State Diagram: Logic flow within feature**
 
-The state diagram shows how the HttpBin node processes different HTTP operations for testing purposes.
+The state diagram shows the batch processing lifecycle from file discovery to completion reporting.
 
 ```mermaid
 ---
-title: HttpBin Node Operation Flow
+title: Batch Processing Lifecycle
 ---
 stateDiagram-v2
-    [*] --> "Resource Selection"
-    "Resource Selection" --> "Operation Selection"
-    "Operation Selection" --> "Parameter Configuration"
-    "Parameter Configuration" --> "HTTP Request Execution"
-    "HTTP Request Execution" --> "Response Processing"
-    "Response Processing" --> "Output Formatting"
-    "Output Formatting" --> [*]
-    "HTTP Request Execution" --> "Error Handling" : Request Failed
-    "Error Handling" --> [*]
+    [*] --> "Batch Operation Input"
+    "Batch Operation Input" --> "Directory Scanning"
+    "Directory Scanning" --> "Pattern Matching"
+    "Pattern Matching" --> "File List Generation"
+    "File List Generation" --> "Processing Mode Selection"
+    "Processing Mode Selection" --> "Sequential Processing" : Sequential Mode
+    "Processing Mode Selection" --> "Parallel Processing" : Parallel Mode
+    "Sequential Processing" --> "File Processing Loop"
+    "Parallel Processing" --> "Concurrent Execution"
+    "File Processing Loop" --> "Results Aggregation"
+    "Concurrent Execution" --> "Results Aggregation"
+    "Results Aggregation" --> "Batch Completion"
+    "Batch Completion" --> [*]
 ```
 
 **Sequence Diagram: Interactions between systems to enable Feature**
 
-Shows how the HttpBin node interacts with external HTTP services for testing purposes.
+Shows how batch processing manages multiple file operations with optional parallelization.
 
 ```mermaid
 ---
-title: HTTP Testing Integration Flow
+title: Batch Processing Flow
 ---
 flowchart TD
-    "n8n Workflow" --> "HttpBin Node"
-    "HttpBin Node" --> "Parameter Processor"
-    "Parameter Processor" --> "HTTP Request Builder"
-    "HTTP Request Builder" --> "HttpBin API Service"
-    "HttpBin API Service" --> "Response Handler"
-    "Response Handler" --> "JSON Output Formatter"
-    "JSON Output Formatter" --> "Next Workflow Node"
+    "Input Directory" --> "Batch Operation"
+    "Batch Operation" --> "File Pattern Matcher"
+    "File Pattern Matcher" --> "Processing Strategy Selector"
+    "Processing Strategy Selector" --> "Sequential Processor"
+    "Processing Strategy Selector" --> "Parallel Processor"
+    "Sequential Processor" --> "Individual File Processor"
+    "Parallel Processor" --> "Concurrent File Processor"
+    "Individual File Processor" --> "Results Collector"
+    "Concurrent File Processor" --> "Results Collector"
+    "Results Collector" --> "Batch Summary Generator"
 ```
 
 **Data Entity Relationship: Data structure for entities in Feature**
 
-Data structures for HTTP testing operations and response handling.
+Data structures for batch processing configuration and result tracking.
 
 ```mermaid
 ---
-title: HTTP Testing Data Model
+title: Batch Processing Data Model
 ---
 erDiagram
-    "HTTP Operation" {
-        string operationId
-        string httpMethod
-        string endpoint
-        object queryParameters
-        object requestBody
-        object headers
+    "Batch Configuration" {
+        string inputDirectory
+        string filePattern
+        string outputDirectory
+        string outputFormat
+        boolean parallel
+        int maxConcurrent
     }
     
-    "Request Configuration" {
-        string configId
-        string baseURL
-        object defaultHeaders
-        object authentication
-        int timeout
+    "File Processing Job" {
+        string fileName
+        string inputPath
+        string outputPath
+        boolean success
+        string error
     }
     
-    "HTTP Response" {
-        string responseId
-        int statusCode
-        object responseHeaders
-        object responseBody
-        datetime timestamp
+    "Batch Results" {
+        boolean success
+        int filesProcessed
+        int successful
+        int failed
+        boolean parallel
+        int maxConcurrent
+        array results
     }
     
-    "Test Scenario" {
-        string scenarioId
-        string scenarioName
-        array testOperations
-        object expectedResults
+    "Processing Statistics" {
+        string pattern
+        string directory
+        int totalFiles
+        int processedFiles
+        datetime startTime
+        datetime endTime
     }
     
-    "HTTP Operation" ||--o{ "Request Configuration" : uses
-    "HTTP Operation" ||--o{ "HTTP Response" : produces
-    "Test Scenario" ||--o{ "HTTP Operation" : includes
+    "Batch Configuration" ||--o{ "File Processing Job" : generates
+    "File Processing Job" ||--o{ "Batch Results" : aggregated_into
+    "Batch Results" ||--o{ "Processing Statistics" : includes
+```
+
+## USE-CASE: Development Environment and Testing Infrastructure
+
+**Feature 1: Docker-based Testing Environment with Chromium Support**
+
+|| definition |
+|--|--|
+| GIVEN | Developers need to test MermaidCli node functionality with proper Chromium rendering dependencies |
+| WHEN | The Docker testing environment is launched with n8n service and Chromium browser support |
+| THEN | A complete testing environment is available for validating CLI subprocess execution and diagram generation |
+
+**State Diagram: Logic flow within feature**
+
+The state diagram shows the testing environment setup and validation process for the MermaidCli node.
+
+```mermaid
+---
+title: Testing Environment Lifecycle
+---
+stateDiagram-v2
+    [*] --> "Docker Environment Setup"
+    "Docker Environment Setup" --> "Chromium Installation"
+    "Chromium Installation" --> "n8n Service Configuration"
+    "n8n Service Configuration" --> "MermaidCli Node Loading"
+    "MermaidCli Node Loading" --> "Test Workflow Creation"
+    "Test Workflow Creation" --> "CLI Subprocess Testing"
+    "CLI Subprocess Testing" --> "Diagram Generation Validation"
+    "Diagram Generation Validation" --> "Test Results Analysis"
+    "Test Results Analysis" --> [*]
+```
+
+**Sequence Diagram: Interactions between systems to enable Feature**
+
+Shows how the testing environment integrates Docker, n8n, and Chromium for comprehensive node testing.
+
+```mermaid
+---
+title: Testing Environment Integration
+---
+flowchart TD
+    "Docker Compose" --> "Container Orchestration"
+    "Container Orchestration" --> "Chromium Browser Setup"
+    "Chromium Browser Setup" --> "n8n Service Launch"
+    "n8n Service Launch" --> "MermaidCli Node Registration"
+    "MermaidCli Node Registration" --> "Test Workflow Execution"
+    "Test Workflow Execution" --> "CLI Subprocess Validation"
+    "CLI Subprocess Validation" --> "Output Verification"
+    "Output Verification" --> "Test Results Report"
+```
+
+**Data Entity Relationship: Data structure for entities in Feature**
+
+Data structures for testing environment configuration and validation results.
+
+```mermaid
+---
+title: Testing Environment Data Model
+---
+erDiagram
+    "Docker Configuration" {
+        string serviceName
+        string dockerImage
+        array environmentVariables
+        array volumeMounts
+        object networkSettings
+    }
+    
+    "Test Environment" {
+        string environmentId
+        string chromiumPath
+        string n8nVersion
+        object puppeteerConfig
+        array testCases
+    }
+    
+    "Test Execution" {
+        string testId
+        string testName
+        boolean success
+        string output
+        string error
+        datetime executionTime
+    }
+    
+    "Validation Results" {
+        string resultId
+        boolean cliWorking
+        boolean chromiumWorking
+        boolean nodeLoading
+        array generatedFiles
+        object performanceMetrics
+    }
+    
+    "Docker Configuration" ||--o{ "Test Environment" : creates
+    "Test Environment" ||--o{ "Test Execution" : runs
+    "Test Execution" ||--o{ "Validation Results" : produces
 ```

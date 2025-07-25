@@ -9,16 +9,10 @@ export const mermaidOperations: INodeProperties[] = [
 		default: 'generate',
 		options: [
 			{
-				name: 'Generate Diagram',
-				value: 'generate',
-				description: 'Generate diagram from Mermaid syntax',
-				action: 'Generate a mermaid diagram',
-			},
-			{
-				name: 'Validate Syntax',
-				value: 'validate',
-				description: 'Validate Mermaid diagram syntax',
-				action: 'Validate mermaid syntax',
+				name: 'Batch Process',
+				value: 'batch',
+				description: 'Process multiple diagrams at once',
+				action: 'Batch process diagrams',
 			},
 			{
 				name: 'Convert Format',
@@ -27,10 +21,22 @@ export const mermaidOperations: INodeProperties[] = [
 				action: 'Convert diagram format',
 			},
 			{
-				name: 'Batch Process',
-				value: 'batch',
-				description: 'Process multiple diagrams at once',
-				action: 'Batch process diagrams',
+				name: 'Generate Diagram',
+				value: 'generate',
+				description: 'Generate diagram from Mermaid syntax',
+				action: 'Generate a mermaid diagram',
+			},
+			{
+				name: 'Render to Binary',
+				value: 'renderToBinary',
+				description: 'Render diagram directly to binary data',
+				action: 'Render mermaid diagram to binary',
+			},
+			{
+				name: 'Validate Syntax',
+				value: 'validate',
+				description: 'Validate Mermaid diagram syntax',
+				action: 'Validate mermaid syntax',
 			},
 		],
 	},
@@ -250,6 +256,147 @@ export const generateOperationFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				operation: ['generate'],
+				outputFormat: ['png'],
+			},
+		},
+		default: 600,
+		description: 'Height of the output image in pixels',
+	},
+];
+
+export const renderToBinaryOperationFields: INodeProperties[] = [
+	{
+		displayName: 'Mermaid Code',
+		name: 'mermaidCode',
+		type: 'string',
+		typeOptions: {
+			rows: 10,
+		},
+		displayOptions: {
+			show: {
+				operation: ['renderToBinary'],
+			},
+		},
+		default: 'graph TD\n    A[Start] --> B[Process]\n    B --> C[End]',
+		description: 'The Mermaid diagram code to render',
+		placeholder: 'graph TD\n    A[Start] --> B[Process]\n    B --> C[End]',
+	},
+	{
+		displayName: 'Output Format',
+		name: 'outputFormat',
+		type: 'options',
+		displayOptions: {
+			show: {
+				operation: ['renderToBinary'],
+			},
+		},
+		default: 'png',
+		options: [
+			{
+				name: 'PNG',
+				value: 'png',
+				description: 'Portable Network Graphics',
+			},
+			{
+				name: 'SVG',
+				value: 'svg',
+				description: 'Scalable Vector Graphics',
+			},
+			{
+				name: 'PDF',
+				value: 'pdf',
+				description: 'Portable Document Format',
+			},
+		],
+	},
+	{
+		displayName: 'Binary Property Name',
+		name: 'binaryPropertyName',
+		type: 'string',
+		displayOptions: {
+			show: {
+				operation: ['renderToBinary'],
+			},
+		},
+		default: 'data',
+		description: 'Name of the binary property to store the diagram data',
+		placeholder: 'data',
+	},
+	{
+		displayName: 'File Name',
+		name: 'fileName',
+		type: 'string',
+		displayOptions: {
+			show: {
+				operation: ['renderToBinary'],
+			},
+		},
+		default: '',
+		description: 'File name for the binary data (auto-generated if empty)',
+		placeholder: 'diagram.png',
+	},
+	{
+		displayName: 'Theme',
+		name: 'theme',
+		type: 'options',
+		displayOptions: {
+			show: {
+				operation: ['renderToBinary'],
+			},
+		},
+		default: 'default',
+		options: [
+			{
+				name: 'Default',
+				value: 'default',
+			},
+			{
+				name: 'Dark',
+				value: 'dark',
+			},
+			{
+				name: 'Forest',
+				value: 'forest',
+			},
+			{
+				name: 'Neutral',
+				value: 'neutral',
+			},
+		],
+	},
+	{
+		displayName: 'Background Color',
+		name: 'backgroundColor',
+		type: 'color',
+		displayOptions: {
+			show: {
+				operation: ['renderToBinary'],
+			},
+		},
+		default: 'white',
+		description: 'Background color for the diagram',
+		placeholder: 'white',
+	},
+	{
+		displayName: 'Width',
+		name: 'width',
+		type: 'number',
+		displayOptions: {
+			show: {
+				operation: ['renderToBinary'],
+				outputFormat: ['png'],
+			},
+		},
+		default: 800,
+		description: 'Width of the output image in pixels',
+	},
+	{
+		displayName: 'Height',
+		name: 'height',
+		type: 'number',
+		displayOptions: {
+			show: {
+				operation: ['renderToBinary'],
 				outputFormat: ['png'],
 			},
 		},

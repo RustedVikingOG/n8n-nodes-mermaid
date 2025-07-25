@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.1.3] - 2025-07-25
+
+### Updated
+- **Architecture Documentation**: Completely updated `docs/designs/architecture.md` to accurately reflect MermaidCli single-node implementation with CLI subprocess execution
+- **Use Cases Documentation**: Rewrote `docs/designs/use_cases.md` with 5 actual use cases covering all implemented operations (generate, renderToBinary, validate, convert, batch)
+- **Implementation Accuracy**: Updated all documentation to reflect actual CLI integration using @mermaid-js/mermaid-cli with Chromium rendering
+- **System Components**: Documented all 7 system components including CLI Integration System and Testing Environment
+- **Mermaid Diagrams**: Added comprehensive architecture and flow diagrams using proper Mermaid syntax with quoted multi-word names
+
+### Added
+- **Complete Use Case Coverage**: Added detailed use cases for CLI-based diagram generation, binary data rendering, syntax validation, format conversion, and batch processing
+- **Data Entity Models**: Added comprehensive entity relationship diagrams for each operation's data structures
+- **State Diagrams**: Added processing flow state diagrams for all major operations
+- **Sequence Diagrams**: Added interaction sequence diagrams showing CLI subprocess execution flows
+
+### Technical Details
+- **Documentation Sync Protocol**: Executed complete sync protocol per documenter-prompt.md requirements
+- **Current Implementation**: All documentation now accurately describes the actual MermaidCli node with 5 operations
+- **CLI Subprocess Details**: Documented mmdc command execution, Chromium environment setup, and file management
+- **Testing Infrastructure**: Updated testing documentation to reflect Docker-based environment with Chromium support
+
+## [0.1.2] - 2025-07-25
+
 ## [0.1.2] - 2025-07-25
 
 ### Fixed

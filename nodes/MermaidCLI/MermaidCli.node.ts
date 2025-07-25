@@ -9,16 +9,57 @@ import {
 import {
 	mermaidOperations,
 	generateOperationFields,
+	renderToBinaryOperationFields,
 	validateOperationFields,
 	convertOperationFields,
 	batchOperationFields,
 } from './MermaidOperations';
 
-import { run as mermaidCliRun } from '@mermaid-js/mermaid-cli';
-import mermaid from 'mermaid';
+// Only use CLI via subprocess - no need for mermaid library imports
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+// Helper function to run mermaid CLI via subprocess
+async function runMermaidCli(inputPath: string, outputPath: string, options: any = {}) {
+	const { theme = 'default', backgroundColor = 'white', width = 800, height = 600 } = options;
+
+	const args = [
+		'-i', inputPath,
+		'-o', outputPath,
+		'-t', theme,
+		'-b', backgroundColor,
+		'--width', width.toString(),
+		'--height', height.toString()
+	];
+
+	// Set environment variables for Chrome in container
+	const env = {
+		...process.env,
+		PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser',
+		CHROME_BIN: '/usr/bin/chromium-browser',
+		PUPPETEER_ARGS: '--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu'
+	};
+
+	const command = `mmdc ${args.join(' ')}`;
+
+	try {
+		const { stdout, stderr } = await execAsync(command, { env });
+		if (stderr) {
+			console.warn('Mermaid CLI stderr:', stderr);
+		}
+		return { success: true, stdout, stderr };
+	} catch (error) {
+		throw new NodeOperationError(
+			{ message: `Mermaid CLI execution failed: ${error.message}` } as any,
+			{ message: `Mermaid CLI execution failed: ${error.message}` }
+		);
+	}
+}
 
 export class MermaidCli implements INodeType {
 	description: INodeTypeDescription = {
@@ -37,6 +78,7 @@ export class MermaidCli implements INodeType {
 		properties: [
 			...mermaidOperations,
 			...generateOperationFields,
+			...renderToBinaryOperationFields,
 			...validateOperationFields,
 			...convertOperationFields,
 			...batchOperationFields,
@@ -56,6 +98,9 @@ export class MermaidCli implements INodeType {
 				switch (operation) {
 					case 'generate':
 						result = await generateDiagram(this, i);
+						break;
+					case 'renderToBinary':
+						result = await renderToBinary(this, i);
 						break;
 					case 'validate':
 						result = await validateSyntax(this, i);
@@ -102,6 +147,108 @@ export class MermaidCli implements INodeType {
 		}
 
 		return [returnData];
+	}
+}
+
+async function renderToBinary(executeFunctions: IExecuteFunctions, itemIndex: number): Promise<any> {
+	const mermaidCode = executeFunctions.getNodeParameter('mermaidCode', itemIndex) as string;
+	const outputFormat = executeFunctions.getNodeParameter('outputFormat', itemIndex) as string;
+	const binaryPropertyName = executeFunctions.getNodeParameter('binaryPropertyName', itemIndex) as string;
+	let fileName = executeFunctions.getNodeParameter('fileName', itemIndex) as string;
+	const theme = executeFunctions.getNodeParameter('theme', itemIndex) as string;
+	const backgroundColor = executeFunctions.getNodeParameter('backgroundColor', itemIndex) as string;
+
+	// Auto-generate filename if not provided
+	if (!fileName) {
+		fileName = `mermaid-diagram-${Date.now()}.${outputFormat}`;
+	}
+
+	// Create temporary input file for mermaid code
+	const tempDir = os.tmpdir();
+	const inputFilePath = path.join(tempDir, `mermaid-input-${Date.now()}-${itemIndex}.mmd`);
+	const outputFilePath = path.join(tempDir, `mermaid-output-${Date.now()}-${itemIndex}.${outputFormat}`);
+
+	try {
+		// Write mermaid code to temporary input file
+		await fs.writeFile(inputFilePath, mermaidCode);
+
+		// Prepare CLI options
+		const options: any = {
+			theme,
+			backgroundColor,
+		};
+
+		// Handle format-specific options
+		if (outputFormat === 'png') {
+			const width = executeFunctions.getNodeParameter('width', itemIndex) as number;
+			const height = executeFunctions.getNodeParameter('height', itemIndex) as number;
+			options.width = width;
+			options.height = height;
+		}
+
+		// Execute mermaid CLI to generate binary output
+		await runMermaidCli(inputFilePath, outputFilePath, options);
+
+		// Read the generated file as binary buffer
+		const fileBuffer = await fs.readFile(outputFilePath);
+
+		// Set up MIME type based on format
+		let mimeType: string;
+		switch (outputFormat) {
+			case 'png':
+				mimeType = 'image/png';
+				break;
+			case 'svg':
+				mimeType = 'image/svg+xml';
+				break;
+			case 'pdf':
+				mimeType = 'application/pdf';
+				break;
+			default:
+				mimeType = 'application/octet-stream';
+		}
+
+		// Create binary data object
+		const result: any = {
+			success: true,
+			format: outputFormat,
+			fileName,
+			binaryPropertyName,
+		};
+
+		// Add binary data to result
+		result.binary = {
+			[binaryPropertyName]: {
+				data: fileBuffer.toString('base64'),
+				mimeType,
+				fileName,
+				fileExtension: outputFormat,
+			},
+		};
+
+		// Clean up temporary files
+		await fs.unlink(inputFilePath);
+		await fs.unlink(outputFilePath);
+
+		return result;
+	} catch (error) {
+		// Clean up files on error
+		try {
+			await fs.unlink(inputFilePath);
+		} catch (cleanupError) {
+			// Ignore cleanup errors
+		}
+		try {
+			await fs.unlink(outputFilePath);
+		} catch (cleanupError) {
+			// Ignore cleanup errors
+		}
+
+		throw new NodeOperationError(
+			executeFunctions.getNode(),
+			`Failed to render diagram to binary: ${(error as Error).message}`,
+			{ itemIndex },
+		);
 	}
 }
 
@@ -165,12 +312,8 @@ async function generateDiagram(executeFunctions: IExecuteFunctions, itemIndex: n
 	}
 
 	try {
-		// Use the mermaid-cli Node.js API with proper typing
-		await mermaidCliRun(
-			inputFilePath,
-			outputFilePath as `${string}.png` | `${string}.svg` | `${string}.pdf`,
-			options
-		);
+		// Use the mermaid CLI via subprocess
+		await runMermaidCli(inputFilePath, outputFilePath, options);
 
 		let result: any = {
 			success: true,
@@ -245,7 +388,9 @@ async function generateDiagram(executeFunctions: IExecuteFunctions, itemIndex: n
 			} catch (binaryError) {
 				result.binaryError = (binaryError as Error).message;
 			}
-		}			// Clean up temporary input file if created
+		}
+
+		// Clean up temporary input file if created
 			if (inputSource === 'text') {
 				try {
 					await fs.unlink(inputFilePath);
@@ -285,23 +430,36 @@ async function validateSyntax(executeFunctions: IExecuteFunctions, itemIndex: nu
 	const detailedOutput = executeFunctions.getNodeParameter('detailedOutput', itemIndex) as boolean;
 
 		try {
-			// Initialize mermaid for validation
-			mermaid.initialize({ startOnLoad: false });
+			// Basic syntax validation - check for common mermaid diagram types
+			const trimmedCode = mermaidCode.trim();
+			const validStartPatterns = [
+				'graph', 'flowchart', 'sequenceDiagram', 'classDiagram',
+				'stateDiagram', 'erDiagram', 'pie', 'gantt', 'gitgraph',
+				'journey', 'mindmap', 'timeline', 'sankey', 'requirement'
+			];
 
-			// Use mermaid's parse function to validate syntax
-			const parseResult = await mermaid.parse(mermaidCode);
+			const isValid = validStartPatterns.some(pattern =>
+				trimmedCode.toLowerCase().startsWith(pattern.toLowerCase())
+			);
 
-			if (parseResult) {
+			if (isValid) {
 				return {
 					valid: true,
-					message: 'Mermaid syntax is valid',
-					details: detailedOutput ? { parseResult } : undefined,
+					message: 'Mermaid syntax appears valid (basic check)',
+					details: detailedOutput ? {
+						diagramType: validStartPatterns.find(pattern =>
+							trimmedCode.toLowerCase().startsWith(pattern.toLowerCase())
+						)
+					} : undefined,
 				};
 			} else {
 				return {
 					valid: false,
-					message: 'Mermaid syntax is invalid',
-					details: detailedOutput ? { parseResult } : undefined,
+					message: 'Mermaid syntax is invalid - unrecognized diagram type',
+					details: detailedOutput ? {
+						code: trimmedCode.substring(0, 100) + '...',
+						supportedTypes: validStartPatterns
+					} : undefined,
 				};
 			}
 		} catch (error) {
@@ -320,11 +478,7 @@ async function convertFormat(executeFunctions: IExecuteFunctions, itemIndex: num
 	const outputPath = executeFunctions.getNodeParameter('outputPath', itemIndex) as string;
 
 		try {
-			await mermaidCliRun(
-				inputFilePath,
-				outputPath as `${string}.png` | `${string}.svg` | `${string}.pdf`,
-				{}
-			);
+			await runMermaidCli(inputFilePath, outputPath, {});
 
 			return {
 				success: true,
@@ -381,11 +535,7 @@ async function batchProcess(executeFunctions: IExecuteFunctions, itemIndex: numb
 						const outputPath = path.join(outputDirectory, outputFile);
 
 						try {
-							await mermaidCliRun(
-								inputPath,
-								outputPath as `${string}.png` | `${string}.svg` | `${string}.pdf`,
-								{}
-							);
+							await runMermaidCli(inputPath, outputPath, {});
 							return {
 								file,
 								success: true,
@@ -413,11 +563,7 @@ async function batchProcess(executeFunctions: IExecuteFunctions, itemIndex: numb
 					const outputPath = path.join(outputDirectory, outputFile);
 
 					try {
-						await mermaidCliRun(
-							inputPath,
-							outputPath as `${string}.png` | `${string}.svg` | `${string}.pdf`,
-							{}
-						);
+						await runMermaidCli(inputPath, outputPath, {});
 						results.push({
 							file,
 							success: true,

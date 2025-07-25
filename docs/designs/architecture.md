@@ -37,14 +37,15 @@ flowchart TD
 
 **Mermaid Node Package**
 
-The npm package containing custom n8n nodes that provide Mermaid diagram generation capabilities. This package follows n8n's community node standards and includes node definitions, credentials, and assets.
+The npm package containing the MermaidCli custom n8n node that provides comprehensive Mermaid diagram generation capabilities through CLI subprocess execution. This package follows n8n's community node standards and includes node definitions and SVG assets.
 
 **Core Functionality: Mermaid Node Package**
 
-- Node Implementation: Provides the INodeType implementations for different Mermaid diagram types
-- Credential Management: Handles authentication for external services if needed
-- Asset Management: Includes icons and visual assets for the nodes
-- Build Pipeline: Compiles TypeScript to JavaScript and packages assets for distribution
+- Single Node Implementation: Provides the MermaidCli INodeType with 5 operations (generate, renderToBinary, validate, convert, batch)
+- CLI Integration: Uses @mermaid-js/mermaid-cli via subprocess for reliable diagram rendering with Chromium
+- Multi-format Output: Supports PNG, SVG, and PDF output formats with various delivery modes
+- Asset Management: Includes mermaid.svg icon for the node display in n8n workflow editor
+- Build Pipeline: Compiles TypeScript to JavaScript and packages assets for npm distribution
 
 **Architecture Diagram of component: Mermaid Node Package**
 
@@ -53,47 +54,83 @@ The npm package containing custom n8n nodes that provide Mermaid diagram generat
 title: Mermaid Node Package Structure
 ---
 flowchart TD
-    "Package Entry Point" --> "Node Definitions"
-    "Node Definitions" --> "Example Node"
-    "Node Definitions" --> "HttpBin Test Node"
-    "Node Definitions" --> "Mermaid Diagram Nodes"
-    "Credential Definitions" --> "HttpBin Credentials"
-    "Credential Definitions" --> "External Service Credentials"
+    "Package Entry Point (index.js)" --> "MermaidCli Node Definition"
+    "MermaidCli Node Definition" --> "MermaidCli.node.ts"
+    "MermaidCli.node.ts" --> "MermaidOperations.ts"
+    "MermaidOperations.ts" --> "Generate Operation"
+    "MermaidOperations.ts" --> "RenderToBinary Operation"
+    "MermaidOperations.ts" --> "Validate Operation"
+    "MermaidOperations.ts" --> "Convert Operation"
+    "MermaidOperations.ts" --> "Batch Operation"
     "Build System" --> "TypeScript Compiler"
     "Build System" --> "Gulp Asset Pipeline"
     "TypeScript Compiler" --> "JavaScript Output"
-    "Gulp Asset Pipeline" --> "Icon Assets"
+    "Gulp Asset Pipeline" --> "mermaid.svg Icon"
     "JavaScript Output" --> "Distribution Package"
-    "Icon Assets" --> "Distribution Package"
+    "mermaid.svg Icon" --> "Distribution Package"
 ```
 
 **Custom Node Runtime**
 
-Individual node instances that execute within n8n workflows to generate Mermaid diagrams. Each node type handles specific diagram generation tasks and processes input data to create diagram outputs.
+The MermaidCli node instance that executes within n8n workflows to generate Mermaid diagrams through CLI subprocess operations. The node provides 5 distinct operations for comprehensive diagram processing and handles multiple output formats and delivery modes.
 
 **Core Functionality: Custom Node Runtime**
 
-- Input Processing: Receives and validates input data from previous workflow nodes
-- Diagram Generation: Creates Mermaid diagram syntax based on input data and configuration
-- Output Formatting: Formats generated diagrams for consumption by subsequent nodes
-- Error Handling: Manages errors and provides meaningful feedback for debugging
+- Input Processing: Receives and validates Mermaid syntax from text input or file paths
+- CLI Subprocess Management: Executes @mermaid-js/mermaid-cli with proper Chromium environment configuration
+- Multi-Operation Support: Handles generate, renderToBinary, validate, convert, and batch operations
+- Output Formatting: Delivers results as file content, binary data, or file paths depending on configuration
+- Error Handling: Manages CLI execution errors and provides detailed feedback for debugging
 
 **Architecture Diagram of component: Custom Node Runtime**
 
 ```mermaid
 ---
-title: Custom Node Execution Flow
+title: MermaidCli Node Execution Flow
 ---
 flowchart TD
-    "Workflow Input Data" --> "Node Parameter Validation"
-    "Node Parameter Validation" --> "Input Data Processing"
-    "Input Data Processing" --> "Mermaid Syntax Generation"
-    "Mermaid Syntax Generation" --> "Diagram Rendering"
-    "Diagram Rendering" --> "Output Data Formation"
-    "Output Data Formation" --> "Workflow Output"
+    "Workflow Input Data" --> "Operation Selection"
+    "Operation Selection" --> "Parameter Validation"
+    "Parameter Validation" --> "Input Processing"
+    "Input Processing" --> "CLI Subprocess Execution"
+    "CLI Subprocess Execution" --> "Chromium Rendering"
+    "Chromium Rendering" --> "Output Format Processing"
+    "Output Format Processing" --> "Result Delivery"
+    "Result Delivery" --> "Workflow Output"
     "Error Handling" --> "Workflow Output"
-    "Mermaid Syntax Generation" --> "Error Handling"
-    "Diagram Rendering" --> "Error Handling"
+    "CLI Subprocess Execution" --> "Error Handling"
+    "Chromium Rendering" --> "Error Handling"
+```
+
+**Mermaid CLI Integration System**
+
+The subprocess execution system that interfaces with @mermaid-js/mermaid-cli to render Mermaid diagrams using Chromium browser engine. This system handles command-line argument construction, environment variable configuration, and output file management.
+
+**Core Functionality: Mermaid CLI Integration System**
+
+- Subprocess Execution: Manages mmdc command execution with proper argument formatting
+- Chromium Configuration: Sets environment variables for headless browser rendering in containerized environments
+- File Management: Handles temporary file creation, cleanup, and output format processing
+- Error Recovery: Provides detailed error reporting for CLI execution failures and cleanup operations
+
+**Architecture Diagram of component: Mermaid CLI Integration System**
+
+```mermaid
+---
+title: CLI Integration and Execution Pipeline
+---
+flowchart TD
+    "Mermaid Syntax Input" --> "Temporary File Creation"
+    "Temporary File Creation" --> "CLI Argument Construction"
+    "CLI Argument Construction" --> "Environment Configuration"
+    "Environment Configuration" --> "Chromium Path Setup"
+    "Chromium Path Setup" --> "mmdc Command Execution"
+    "mmdc Command Execution" --> "Output File Generation"
+    "Output File Generation" --> "Binary Data Reading"
+    "Binary Data Reading" --> "File Cleanup"
+    "File Cleanup" --> "Result Processing"
+    "Error Monitoring" --> "Result Processing"
+    "mmdc Command Execution" --> "Error Monitoring"
 ```
 
 **TypeScript Compilation System**
@@ -104,7 +141,7 @@ The build system that compiles TypeScript source code to JavaScript and prepares
 
 - Type Checking: Validates TypeScript code against n8n interfaces and types
 - Code Compilation: Transpiles TypeScript to JavaScript compatible with n8n runtime
-- Asset Processing: Copies icons and other assets to the distribution directory
+- Asset Processing: Copies mermaid.svg icon to the distribution directory via Gulp
 - Package Preparation: Creates the final npm package structure for publishing
 
 **Architecture Diagram of component: TypeScript Compilation System**
@@ -115,11 +152,11 @@ title: Build and Compilation Pipeline
 ---
 flowchart TD
     "TypeScript Source Files" --> "TypeScript Compiler (tsc)"
-    "Node Icons and Assets" --> "Gulp Build Pipeline"
+    "mermaid.svg Icon" --> "Gulp Build Pipeline"
     "TypeScript Compiler (tsc)" --> "JavaScript Output Files"
-    "Gulp Build Pipeline" --> "Processed Assets"
+    "Gulp Build Pipeline" --> "Processed SVG Asset"
     "JavaScript Output Files" --> "Distribution Directory"
-    "Processed Assets" --> "Distribution Directory"
+    "Processed SVG Asset" --> "Distribution Directory"
     "Distribution Directory" --> "npm Package"
     "ESLint Configuration" --> "Code Quality Validation"
     "Code Quality Validation" --> "TypeScript Compiler (tsc)"
@@ -127,29 +164,30 @@ flowchart TD
 
 **Credential Management System**
 
-Handles authentication and credential storage for external services that Mermaid nodes may need to access, such as APIs for diagram export or cloud storage services.
+Currently not implemented as the MermaidCli node operates through local CLI subprocess execution without requiring external service authentication. Future versions may include credential management for cloud diagram storage or export services.
 
 **Core Functionality: Credential Management System**
 
-- Credential Definition: Defines the structure and validation for different credential types
-- Secure Storage: Integrates with n8n's credential storage system for secure handling
-- Authentication Flow: Manages authentication with external services
-- Credential Testing: Validates credentials against external services
+- Local Operation: No credentials required for basic Mermaid CLI diagram generation
+- Future Extension: Framework available for adding external service authentication
+- Secure Storage: Would integrate with n8n's credential storage system when needed
+- Service Integration: Prepared for API-based diagram export or cloud storage features
 
 **Architecture Diagram of component: Credential Management System**
 
 ```mermaid
 ---
-title: Credential Management Flow
+title: Credential Management Flow (Future Implementation)
 ---
 flowchart TD
+    "Local CLI Operation" --> "No Credentials Required"
+    "Future Cloud Services" --> "Credential Input Form"
     "Credential Input Form" --> "Credential Validation"
     "Credential Validation" --> "n8n Credential Store"
     "n8n Credential Store" --> "Encrypted Storage"
-    "Node Execution" --> "Credential Retrieval"
-    "Credential Retrieval" --> "n8n Credential Store"
+    "Node Execution" --> "Local CLI Operation"
+    "Future External APIs" --> "Credential Retrieval"
     "Credential Retrieval" --> "External Service Authentication"
-    "External Service Authentication" --> "API Access"
 ```
 
 ## Overall System Architecture
@@ -167,21 +205,20 @@ flowchart TB
     subgraph "n8n Platform"
         "Workflow Designer" --> "Workflow Engine"
         "Node Registry" --> "Workflow Engine"
-        "Credential Store" --> "Workflow Engine"
     end
     
     subgraph "Runtime Execution"
-        "Mermaid Node Instance" --> "Diagram Generator"
-        "Diagram Generator" --> "Output Processor"
+        "MermaidCli Node Instance" --> "CLI Subprocess Manager"
+        "CLI Subprocess Manager" --> "Chromium Renderer"
+        "Chromium Renderer" --> "Output Processor"
     end
     
     "npm Package" --> "Node Registry"
-    "Workflow Engine" --> "Mermaid Node Instance"
-    "Credential Store" --> "Mermaid Node Instance"
+    "Workflow Engine" --> "MermaidCli Node Instance"
     "Output Processor" --> "Next Workflow Node"
 ```
 
-The architecture follows n8n's plugin system where custom nodes are loaded as npm packages and executed within the n8n runtime environment. The Mermaid functionality is encapsulated within individual nodes that can be composed into larger workflows for automated diagram generation and processing.
+The architecture follows n8n's plugin system where the custom MermaidCli node is loaded as an npm package and executed within the n8n runtime environment. The Mermaid functionality is implemented through CLI subprocess execution using @mermaid-js/mermaid-cli with Chromium rendering for reliable diagram generation.
 
 **Development Toolchain System**
 
@@ -214,14 +251,14 @@ flowchart TD
 
 **Testing and Validation System**
 
-The system responsible for testing node implementations, validating functionality, and ensuring compatibility with n8n platform requirements before deployment.
+The Docker-based testing environment and validation system that ensures MermaidCli node implementations work correctly with n8n platform requirements and Chromium rendering dependencies.
 
 **Core Functionality: Testing and Validation System**
 
-- Local Testing Environment: Runs n8n locally with development nodes for testing
-- HTTP Testing Framework: Uses HttpBin node for validating HTTP operations and integrations
-- Credential Testing: Validates authentication mechanisms against external services
-- Build Validation: Ensures compiled output meets n8n package requirements
+- Containerized Testing: Docker environment with Chromium for testing CLI subprocess execution
+- Local n8n Integration: Runs n8n locally with development nodes for workflow testing
+- Dependency Validation: Ensures @mermaid-js/mermaid-cli and Chromium dependencies work correctly
+- Build Validation: Verifies compiled output meets n8n community node package requirements
 
 **Architecture Diagram of component: Testing and Validation System**
 
@@ -230,14 +267,15 @@ The system responsible for testing node implementations, validating functionalit
 title: Testing and Validation Flow
 ---
 flowchart TD
-    "Node Implementation" --> "Local n8n Instance"
+    "MermaidCli Implementation" --> "Docker Test Environment"
+    "Docker Test Environment" --> "Chromium Browser Setup"
+    "Chromium Browser Setup" --> "Local n8n Instance"
     "Local n8n Instance" --> "Test Workflow Execution"
-    "Test Workflow Execution" --> "HttpBin Test Node"
-    "HttpBin Test Node" --> "External API Validation"
-    "Credential Testing" --> "Authentication Validation"
+    "Test Workflow Execution" --> "CLI Subprocess Testing"
+    "CLI Subprocess Testing" --> "Diagram Generation Validation"
     "Build Output" --> "Package Structure Validation"
     "Package Structure Validation" --> "npm Registry Preparation"
-    "External API Validation" --> "Integration Test Results"
-    "Authentication Validation" --> "Security Compliance"
+    "Diagram Generation Validation" --> "Output Format Testing"
+    "Output Format Testing" --> "Integration Test Results"
     "Integration Test Results" --> "Deployment Readiness"
 ```
